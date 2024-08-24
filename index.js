@@ -1,40 +1,34 @@
-var http = require('http');
-var url = require('url');
-var fs = require('fs');
-var path = require('path');
+const express = require('express');
+const path = require('path');
+const app = express();
+const port = 8080;
 
-http.createServer(function (req, res) {
-  var q = url.parse(req.url, true);
-  var filename = "." + q.pathname;
+// Serve static files from the current directory
+app.use(express.static('.'));
 
-  // If the request is to the root, serve index.html
-  if (filename === './') {
-    filename = './index.html';
-  } else {
-    // Append .html to the path if not provided
-    filename += filename.endsWith('.html') ? '' : '.html';
-  }
+// Route for the root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-  fs.readFile(filename, function(err, data) {
+// Route for all other requests
+app.get('*', (req, res) => {
+  const filePath = path.join(__dirname, req.path);
+  const htmlFilePath = filePath.endsWith('.html') ? filePath : `${filePath}.html`;
+
+  res.sendFile(htmlFilePath, (err) => {
     if (err) {
       // If the file is not found, serve the custom 404 page
-      fs.readFile('./404.html', function(error404, data404) {
+      res.status(404).sendFile(path.join(__dirname, '404.html'), (error404) => {
         if (error404) {
           // If 404.html also doesn't exist, return a plain text 404 message
-          res.writeHead(404, {'Content-Type': 'text/html'});
-          return res.end("404 Not Found");
-        } else {
-          res.writeHead(404, {'Content-Type': 'text/html'});
-          res.write(data404);
-          return res.end();
+          res.status(404).send('404 Not Found');
         }
       });
-    } else {
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      res.write(data);
-      return res.end();
     }
   });
-}).listen(8080, () => {
-  console.log('Server is running on http://localhost:8080');
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
